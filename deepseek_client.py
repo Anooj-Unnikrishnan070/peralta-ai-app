@@ -17,22 +17,24 @@
 # ----------------------------------------------------------------------------
 
 # deepseek_client.py
-import openai
+from openai import OpenAI
 import streamlit as st
 
-# Configure DeepSeek API
-openai.api_key = st.secrets["DEEPSEEK_API_KEY"]
-openai.api_base = "https://api.deepseek.com"
+# Setup client
+client = OpenAI(
+    api_key=st.secrets["DEEPSEEK_API_KEY"],
+    base_url="https://api.deepseek.com"
+)
 
 class DeepSeekClient:
     def query(self, prompt: str) -> str:
-        response = openai.ChatCompletion.create(
-            model="deepseek-chat",  # use "deepseek-coder" if needed
+        response = client.chat.completions.create(
+            model="deepseek-chat",
             messages=[
                 {"role": "user", "content": prompt}
             ]
         )
-        return response.choices[0].message["content"]
+        return response.choices[0].message.content.strip()
 
 deepseek_client = DeepSeekClient()
 
