@@ -1,0 +1,10 @@
+streamlit
+pandas
+numpy
+sqlite3
+openai
+sentence-transformers
+faiss-cpu
+networkx
+pydot
+rapidfuzz
