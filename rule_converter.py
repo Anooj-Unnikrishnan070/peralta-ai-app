@@ -127,14 +127,7 @@ SQL Query:
 """
 
     try:
-        result = subprocess.run(
-            ["ollama", "run", "deepseek-coder:6.7b"],
-            input=prompt,
-            capture_output=True,
-            text=True,
-            timeout=60
-        )
-        return result.stdout.strip()
+        return deepseek_client.query(prompt)
     except Exception as e:
         return f"❌ Error during DeepSeek conversion: {str(e)}"
 
@@ -170,15 +163,8 @@ You are a business-glossary expert.  Based on these existing definitions:
 Suggest a concise, precise definition for the term: '{term}'
 """
 
-    # 4. Call DeepSeek via Ollama CLI
+    # 4. Call DeepSeek via DeepSeekClient
     try:
-        result = subprocess.run(
-            ["ollama", "run", "deepseek-coder:6.7b"],
-            input=prompt,
-            capture_output=True,
-            text=True,
-            timeout=60
-        )
-        return result.stdout.strip()
+        return deepseek_client.query(prompt)
     except Exception as e:
-        return f"❌ Error generating definition: {e}"
+        return f"❌ Error during DeepSeek conversion: {str(e)}"
