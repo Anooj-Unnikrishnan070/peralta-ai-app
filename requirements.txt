@@ -7,3 +7,4 @@ faiss-cpu
 networkx
 pydot
 rapidfuzz
+matplotlib
