@@ -168,3 +168,43 @@ Suggest a concise, precise definition for the term: '{term}'
         return deepseek_client.query(prompt)
     except Exception as e:
         return f"❌ Error during DeepSeek conversion: {str(e)}"
+
+
+def generate_business_rules_from_missing(llm_client, missing_pct_df):
+    """
+    Generate short business rules using LLM for columns with missing values.
+    """
+    # 🔧 Convert Series to DataFrame if needed
+    if isinstance(missing_pct_df, pd.Series):
+        missing_pct_df = missing_pct_df.to_frame(name="Missing %")
+
+    # 🔍 Safely identify the percentage column
+    missing_pct_col = next(
+        (col for col in missing_pct_df.columns if isinstance(col, str) and "%" in col),
+        None
+    )
+
+    if missing_pct_col is None:
+        raise ValueError("No column found with '%' in its name in missing value dataframe.")
+
+    # 📌 Get columns with > 0% missing
+    missing_columns = missing_pct_df[missing_pct_df[missing_pct_col] > 0].index.tolist()
+
+    # 🤖 Generate rules via LLM
+    rules = {}
+    for col in missing_columns:
+        prompt = f"""You are a data governance assistant.
+
+Write a one-line business rule for a database column named "{col}".
+Do NOT explain. Do NOT include examples, regex, or code. Just one simple rule in plain English.
+Only return the rule directly. Do not use phrases like 'The business rule is', 'could be', 'column named', or quotes.
+Just return the rule as a single plain English sentence, e.g., Company must not be empty." """
+        
+        try:
+            rule = llm_client.generate(prompt)
+            rules[col] = rule.strip()
+        except Exception as e:
+            rules[col] = f"Error generating rule: {e}"
+
+    return rules
+

@@ -20,6 +20,11 @@ from rule_converter import convert_rule_with_deepseek, recommend_term_definition
 from semantic_search import build_schema_index, search_schema
 import networkx as nx
 import matplotlib.pyplot as plt
+from deepseek_client import deepseek_client
+from rule_converter import generate_business_rules_from_missing
+
+# Define llm_client with a .generate method
+llm_client = type("LLMClient", (), {"generate": staticmethod(deepseek_client.query)})
   
 # ----------------------------------------------------------------------------
 # Sidebar - File upload and navigation
@@ -76,6 +81,17 @@ def run_data_quality():
         missing_pct = run_missing_value_check(df)
         score = max(0, 100 - missing_pct.mean())
         st.metric("Data Quality Score", f"{score:.1f}/100")
+
+        st.subheader("Generated Business Rules for Missing Columns")
+        with st.spinner("⚙️ Generating business rules with DeepSeek..."):
+                rules = generate_business_rules_from_missing(llm_client, missing_pct)
+
+        if not rules:
+            st.info("✅ No missing values found. No business rules need to be generated.")
+        else:
+            for col, rule in rules.items():
+                st.markdown(f"**{col}** → {rule}")
+
 
     elif analysis_option == "Duplicate check using Machine Learning":
         st.subheader("Duplicate Detection (Fuzzy-Based)")
