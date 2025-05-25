@@ -24,14 +24,13 @@ import matplotlib.pyplot as plt
 # ----------------------------------------------------------------------------
 # Sidebar - File upload and navigation
 st.set_page_config(layout="wide")
-# st.sidebar.markdown("# Peralta.ai") 
 st.sidebar.markdown(
     '<h1 style="font-size:3.775rem; margin:0;">Peralta AI</h1>',
     unsafe_allow_html=True
 )
 st.sidebar.header("Controls")
 uploaded_file = st.sidebar.file_uploader("Upload SQLite DB", type=["sqlite", "db"])
-mode = st.sidebar.radio("Select Tool:", ["Data Quality Dashboard", "Business Rule Converter"])
+mode = st.sidebar.radio("Select Tool:", ["Data Quality Dashboard", "Lineage Generation and Semantic Search"])
 
 if not uploaded_file:
     st.sidebar.warning("Please upload a SQLite database first.")
@@ -70,7 +69,7 @@ def run_data_quality():
     # Analysis selection
     analysis_option = st.selectbox(
         "Choose an analysis",
-        ["None", "Missing Value Detection", "Duplicate check using Machine Learning", "Anomaly Detection", "PII Detection"],
+        ["None", "Missing Value Detection", "Duplicate check using Machine Learning", "Anomaly Detection", "PII Detection", "Business Rule Conversion"],
     )
 
     if analysis_option == "Missing Value Detection":
@@ -153,6 +152,21 @@ def run_data_quality():
         tag_df = pd.DataFrame(records)
         st.table(tag_df)
 
+    elif analysis_option == "Business Rule Conversion":
+        st.markdown("---\n### Enter your Business Rule")
+        rule = st.text_area("Describe your business rule in natural language:", height=150)
+        output_format = st.selectbox("Output Format", ["SQL", "Python", "Regex"])
+        
+        if st.button("Convert to Technical Rule"):
+            if not rule.strip():
+                st.warning("Please enter a business rule.")
+            else:
+                with st.spinner("Generating technical rule using DeepSeek..."):
+                    output = convert_rule_with_deepseek(rule=rule, db_path=temp_path)
+                st.success(f"Generated {output_format} Rule:")
+                st.code(output, language=output_format.lower())
+
+
 # =============================================================================
 # Rule Converter function
 def run_rule_converter():
@@ -216,19 +230,6 @@ def run_rule_converter():
                 st.write(f"**Match {res['rank']}**: {res['entry']} ({res['level']} - confidence {res['confidence']})")
         else:
             st.warning("Please upload a valid SQLite file first to enable semantic search.")
-
-    # Business Rule conversion input
-    st.markdown("---\n### Enter your Business Rule")
-    rule = st.text_area("Describe your business rule in natural language:", height=150)
-    output_format = st.selectbox("Output Format", ["SQL", "Python", "Regex"])
-    if st.button("Convert to Technical Rule"):
-        if not rule.strip():
-            st.warning("Please enter a business rule.")
-        else:
-            with st.spinner("Generating technical rule using DeepSeek..."):
-                output = convert_rule_with_deepseek(rule=rule, db_path=temp_path)
-            st.success(f"Generated {output_format} Rule:")
-            st.code(output, language=output_format.lower())
 
     # Business term recommendation
     st.markdown("---\n### 💡 Recommend a Business-Glossary Definition")
