@@ -1,3 +1,6 @@
+# These packages are required for local development — install with:
+#    pip install -r requirements.txt
+
 streamlit
 pandas
 numpy

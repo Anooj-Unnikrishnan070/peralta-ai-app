@@ -248,7 +248,7 @@ def run_rule_converter():
             st.warning("Please upload a valid SQLite file first to enable semantic search.")
 
     # Business term recommendation
-    st.markdown("---\n### 💡 Recommend a Business-Glossary Definition")
+    st.markdown("---\n### Recommend a Business-Glossary Definition")
     term = st.text_input("Enter a business term to define (e.g., 'customer'):")
     if st.button("Get Recommended Definition"):
         if not term.strip():

@@ -49,12 +49,12 @@ Answer in JSON exactly like:
         name = column_name.lower()
         # 1) Name‐based heuristics
         heuristics = {
-            "Email":         r"\bemail\b",
-            "Phone":         r"\b(phone|mobile|tel)\b",
-            "SSN":           r"\bssn\b",
-            "Date of Birth": r"\b(dob|birth)\b",
-            "Address":       r"\b(address|street|city|zip|postalcode)\b",
-            "Name":          r"\b(name|first|last)\b",
+            "Email":         r"email",
+            "Phone":         r"phone|mobile|tel",
+            "SSN":           r"ssn",
+            "Date of Birth": r"dob|birth",
+            "Address":       r"address|street|city|zip|postalcode",
+            "Name":          r"first|last|name",
         }
         for pii_type, pattern in heuristics.items():
             if re.search(pattern, name):
@@ -139,35 +139,82 @@ import subprocess
 import pandas as pd
 from rapidfuzz import process, fuzz
 
+# def recommend_term_definition_with_deepseek(term: str,
+#                                            glossary_path: str = "Business Terms.xlsx"
+#                                           ) -> str:
+#     # 1. Load your pre-built glossary
+#     df = pd.read_excel(glossary_path)
+#     terms       = df["Term"].astype(str).tolist()
+#     definitions = df["Definition"].astype(str).tolist()
+
+#     # 2. Find top 5 closest matches
+#     matches = process.extract(term, terms, scorer=fuzz.token_sort_ratio, limit=5)
+
+#     # 3. Build prompt context from those matches
+#     context_lines = []
+#     for match_term, score, idx in matches:
+#         context_lines.append(f"{match_term}: {definitions[idx]}")
+#     context = "\n".join(context_lines)
+
+#     prompt = f"""
+# You are a business-glossary expert.  Based on these existing definitions:
+# {context}
+
+# Suggest a concise, precise definition for the term: '{term}'
+# """
+
+#     # 4. Call DeepSeek via DeepSeekClient
+#     try:
+#         return deepseek_client.query(prompt)
+#     except Exception as e:
+#         return f"❌ Error during DeepSeek conversion: {str(e)}"
+
+
+import subprocess
+import pandas as pd
+from rapidfuzz import process, fuzz
+
 def recommend_term_definition_with_deepseek(term: str,
                                            glossary_path: str = "Business Terms.xlsx"
                                           ) -> str:
-    # 1. Load your pre-built glossary
-    df = pd.read_excel(glossary_path)
+    # 1. Load glossary for context
+    df          = pd.read_excel(glossary_path)
     terms       = df["Term"].astype(str).tolist()
     definitions = df["Definition"].astype(str).tolist()
 
-    # 2. Find top 5 closest matches
+    # 2. Fuzzy-match top 5 existing entries
     matches = process.extract(term, terms, scorer=fuzz.token_sort_ratio, limit=5)
+    context = "\n".join(f"{t}: {definitions[idx]}" for t, _, idx in matches)
 
-    # 3. Build prompt context from those matches
-    context_lines = []
-    for match_term, score, idx in matches:
-        context_lines.append(f"{match_term}: {definitions[idx]}")
-    context = "\n".join(context_lines)
-
+    # 3. New prompt: enforce your glossary-table style
     prompt = f"""
-You are a business-glossary expert.  Based on these existing definitions:
+You are an expert in writing data-glossary descriptions. Based on these examples:
 {context}
 
-Suggest a concise, precise definition for the term: '{term}'
+Now write a single-line description for the term "{term}" that:
+- Does NOT begin with "The term..."
+- Starts immediately with a noun phrase (e.g. "All the information required to...")
+- Lists examples separated by commas (e.g. "start and end date, status, etc.")
+- Has no trailing period or extra framing
+
+Return only that one line.
 """
 
-    # 4. Call DeepSeek via DeepSeekClient
+    # 4. Call DeepSeek via Ollama
     try:
-        return deepseek_client.query(prompt)
+        raw = subprocess.run(
+            ["ollama", "run", "deepseek-coder:6.7b"],
+            input=prompt,
+            capture_output=True,
+            text=True,
+            timeout=60
+        ).stdout.strip()
     except Exception as e:
-        return f"❌ Error during DeepSeek conversion: {str(e)}"
+        return f"❌ Error generating definition: {e}"
+
+    # 5. Final cleanup: strip punctuation/newlines
+    return raw.rstrip(".\n ")
+
 
 
 def generate_business_rules_from_missing(llm_client, missing_pct_df):
